@@ -41,7 +41,7 @@ class ContactController extends Controller
             return response()->json(['data' => $data]);
         } catch (\Exception $e) {
             Log::error('Fetch Contacts Error: ' . $e->getMessage());
-            return response()->json(['status' => 'error', 'message' => 'Failed to fetch contacts.'], 500);
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
     }
 
@@ -68,7 +68,8 @@ class ContactController extends Controller
                 'profile_image' => 'nullable|image',
                 'additional_file' => 'nullable|file',
             ];
-
+            
+            $messages = [];
             // Dynamically validate required custom fields
             $requiredFields = CustomField::where('is_required', true)->get();
             foreach ($requiredFields as $field) {
@@ -126,7 +127,7 @@ class ContactController extends Controller
             throw $e; // Let Laravel handle validation error response
         } catch (\Exception $e) {
             Log::error('Store Contact Error: ' . $e->getMessage());
-            return response()->json(['status' => 'error', 'message' => 'Failed to save contact.'], 500);
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
     }
 

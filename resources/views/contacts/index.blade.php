@@ -164,8 +164,8 @@
                         <p>Select the master contact:</p>
                         <input type="hidden" name="secondary_id" id="secondary_id">
                         <select class="form-select" name="master_id" id="master_id">
+                            <option value="">Select</option>
                             @foreach ($contacts as $contact)
-                                <option value="">Select</option>
                                 <option value="{{ $contact->id }}">{{ $contact->name }} ({{ $contact->email }})
                                 </option>
                             @endforeach
@@ -248,7 +248,7 @@
             });
         }
 
-        // Attach live filter handlers
+        // live filter handlers
         $('#search_name, #search_email').on('keyup', debounce(fetchContacts, 500));
         $('#search_gender').on('change', fetchContacts);
 
@@ -273,6 +273,7 @@
                 success: function(res) {
                     $('#contactModal').modal('hide');
                     fetchContacts();
+                    fetchAllContacts();
                     Swal.fire('Success', res.message, 'success');
                     $('#contactForm')[0].reset();
                 },
@@ -323,7 +324,6 @@
             $.get(`/contacts/${id}`, function(res) {
                 const c = res.contact;
 
-                // Change modal title to Edit
                 $('#contactModalTitle').text('Edit Contact');
                 $('.error-text').text('');
 
@@ -342,7 +342,6 @@
                     @endif
                 @endforeach
 
-                // Load values
                 if (c.custom_fields.length) {
                     c.custom_fields.forEach(function(cf) {
                         $(`[name="custom_fields[${cf.custom_field_id}]"]`).val(cf.value);
@@ -413,6 +412,22 @@
             });
         });
 
+
+        function fetchAllContacts() {
+            $.post("{{ route('contacts.fetch') }}", {
+                _token: "{{ csrf_token() }}"
+            }, function(res) {
+                let options = `<option value="">Select</option>`;
+
+                if (res.data.length > 0) {
+                    $.each(res.data, function(_, contact) {
+                        options += `<option value="${contact.id}">${contact.name} (${contact.email})</option>`;
+                    });
+                }
+
+                $('#master_id').html(options);
+            });
+        }
 
 
         // Call on load
