@@ -19,6 +19,7 @@ return new class extends Migration
             $table->enum('gender', ['Male', 'Female']);
             $table->string('profile_image')->nullable();
             $table->string('additional_file')->nullable();
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
     }

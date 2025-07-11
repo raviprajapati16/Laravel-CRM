@@ -12,7 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('contacts', function (Blueprint $table) {
-            $table->unsignedBigInteger('merged_to_id')->nullable()->after('id'); // ID of master contact
+            $table->foreignId('merged_into_id')
+                ->after('is_active')
+                ->nullable()
+                ->constrained('contacts');
+
+            $table->foreignId('merge_record_id')
+                ->after('merged_into_id')
+                ->nullable()
+                ->constrained('contact_merges');
         });
     }
 

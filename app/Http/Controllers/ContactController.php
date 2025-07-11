@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Contact;
 use App\Models\ContactCustomFieldValue;
+use App\Models\ContactMerge;
 use App\Models\CustomField;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -14,45 +16,119 @@ class ContactController extends Controller
 {
     public function index(Request $request)
     {
-        $contacts = Contact::all();
-        $customFields = CustomField::all();
+        $query = Contact::query()->with(['customFields' => function($query) {
+            $query->where('show_on_table', true);
+        }]);
+        
+        if ($request->has('name') && $request->name) {
+            $query->where('name', 'like', '%' . $request->name . '%');
+        }
+        if ($request->has('email') && $request->email) {
+            $query->where('email', 'like', '%' . $request->email . '%');
+        }
+        if ($request->has('gender') && $request->gender) {
+            $query->where('gender', $request->gender);
+        }
+
+        $contacts = $query->paginate(10);;
+        $customFields = CustomField::where('show_on_table', true)->get();
+        
+        if ($request->ajax()) {
+            return view('contacts.partials.contacts_table', compact('contacts', 'customFields'))->render();
+        }
+
         return view('contacts.index', compact('contacts', 'customFields'));
     }
-
-    public function fetch(Request $request)
+    
+    public function contactsfetch(Request $request)
     {
         try {
-            $contacts = Contact::query();
-
-            if ($request->name) {
-                $contacts->where('name', 'like', "%{$request->name}%");
-            }
-
-            if ($request->email) {
-                $contacts->where('email', 'like', "%{$request->email}%");
-            }
-
-            if ($request->gender) {
-                $contacts->where('gender', $request->gender);
-            }
-
-            $data = $contacts->with(['customFields.customField'])->get();
-
-            return response()->json(['data' => $data]);
+            // Get all active contacts (excluding the one being merged if provided)
+            $contacts = Contact::query()
+            ->when($request->exclude, function($query, $excludeId) {
+                $query->where('id', '!=', $excludeId);
+            })
+            ->orderBy('name')
+            ->get();
+            
+            // Format the response
+            $formattedContacts = $contacts->map(function($contact) {
+                return [
+                    'id' => $contact->id,
+                    'text' => $contact->name . ' (' . $contact->email . ')'
+                ];
+            });
+            
+            return response()->json([
+                'status' => 'success',
+                'contacts' => $formattedContacts
+            ]);
+            
         } catch (\Exception $e) {
-            Log::error('Fetch Contacts Error: ' . $e->getMessage());
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to fetch contacts: ' . $e->getMessage(),
+                'contacts' => []
+            ], 500);
         }
     }
 
-    public function show($id)
+    public function edit(Request $request, $id)
     {
         try {
-            $contact = Contact::with('customFields.customField')->findOrFail($id);
-            return response()->json(['contact' => $contact]);
+            // Eager load contact with custom fields and merge history
+            $contact = Contact::with([
+                'customFields' => function($query) {
+                    $query->select('custom_fields.id', 'name', 'type', 'is_required')
+                        ->withPivot('value');
+                },
+                'mergesAsMaster',
+                'mergesAsMerged'
+            ])->findOrFail($id);
+
+            // Format the response data
+            $formattedContact = [
+                'id' => $contact->id,
+                'name' => $contact->name,
+                'email' => $contact->email,
+                'phone' => $contact->phone,
+                'gender' => $contact->gender,
+                'profile_image_url' => $contact->profile_image ? asset('storage/'.$contact->profile_image) : null,
+                'additional_file_url' => $contact->additional_file ? asset('storage/'.$contact->additional_file) : null,
+                'is_active' => $contact->is_active,
+                'custom_fields' => $contact->customFields->map(function($field) {
+                    return [
+                        'id' => $field->id,
+                        'field_name' => $field->field_name,
+                        'field_type' => $field->field_type,
+                        'is_required' => $field->is_required,
+                        'value' => $field->pivot->value
+                    ];
+                }),
+                'merge_history' => [
+                    'as_master' => $contact->mergesAsMaster,
+                    'as_merged' => $contact->mergesAsMerged
+                ]
+            ];
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $formattedContact
+            ]);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Contact not found'
+            ], 404);
+            
         } catch (\Exception $e) {
-            Log::error('Show Contact Error: ' . $e->getMessage());
-            return response()->json(['status' => 'error', 'message' => 'Failed to fetch contact.'], 500);
+            Log::error("Contact API Error - Show: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to retrieve contact data',
+                'error' => config('app.debug') ? $e->getMessage() : null
+            ], 500);
         }
     }
 
@@ -80,7 +156,8 @@ class ContactController extends Controller
 
             $request->validate($rules, $messages);
 
-
+            DB::beginTransaction();
+            
             // Create or update contact
             $contact = $request->id ? Contact::find($request->id) : new Contact;
             $contact->name = $request->name;
@@ -106,26 +183,34 @@ class ContactController extends Controller
 
             // Save custom field values
             if ($request->has('custom_fields')) {
+                $customFieldsData = [];
+                
                 foreach ($request->custom_fields as $fieldId => $value) {
-                    ContactCustomFieldValue::updateOrCreate(
-                        [
-                            'contact_id' => $contact->id,
-                            'custom_field_id' => $fieldId
-                        ],
-                        [
-                            'value' => $value
-                        ]
-                    );
+                    // Only process if the field exists and value is not empty
+                    if (CustomField::find($fieldId) && !empty($value)) {
+                        $customFieldsData[$fieldId] = ['value' => $value];
+                    }
                 }
+                
+                // Sync custom fields (will detach any not included in the array)
+                $contact->customFields()->sync($customFieldsData);
+            } else {
+                // If no custom fields are submitted, detach all existing ones
+                $contact->customFields()->detach();
             }
+            
+            DB::commit();
 
             return response()->json([
                 'status' => 'success',
                 'message' => $request->id ? 'Contact updated successfully.' : 'Contact added successfully.'
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+
             throw $e; // Let Laravel handle validation error response
         } catch (\Exception $e) {
+            DB::rollBack();
             Log::error('Store Contact Error: ' . $e->getMessage());
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
@@ -150,63 +235,140 @@ class ContactController extends Controller
 
     public function merge(Request $request)
     {
+        DB::beginTransaction();
+
         try {
             $request->validate([
-                'master_id' => 'required|exists:contacts,id',
-                'secondary_id' => 'required|exists:contacts,id|different:master_id'
+                'master_contact_id' => 'required|exists:contacts,id',
+                'merged_contact_id' => 'required|exists:contacts,id|different:master_contact_id',
             ]);
 
-            if ($request->master_id == $request->secondary_id) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Master and Secondary contact cannot be the same.'
-                ], 422);
-            }
+            // Load contacts with their custom field values
+            $master = Contact::with('customFields')->findOrFail($request->master_contact_id);
+            $merged = Contact::with('customFields')->findOrFail($request->merged_contact_id);
 
-            $master = Contact::find($request->master_id);
-            $secondary = Contact::find($request->secondary_id);
+            $mergeDetails = [
+                'merged_at' => now()->toDateTimeString(),
+                'field_changes' => [],
+                'custom_field_changes' => []
+            ];
 
-            // Merge logic
-            if (!$master->email && $secondary->email) $master->email = $secondary->email;
-            if (!$master->phone && $secondary->phone) $master->phone = $secondary->phone;
+            // Merge standard contact fields
+            $this->mergeStandardFields($master, $merged, $mergeDetails);
+
+            // Handle email separately
+            $this->mergeEmailField($master, $merged, $mergeDetails);
 
             // Merge custom fields
-            $secondaryFields = ContactCustomFieldValue::where('contact_id', $secondary->id)->get();
-            foreach ($secondaryFields as $sf) {
-                ContactCustomFieldValue::updateOrCreate(
-                    ['contact_id' => $master->id, 'custom_field_id' => $sf->custom_field_id],
-                    ['value' => $sf->value]
-                );
+            $this->mergeCustomFields($master, $merged, $mergeDetails);
+
+            // Create merge record
+            $mergeRecord = ContactMerge::create([
+                'master_contact_id' => $master->id,
+                'merged_contact_id' => $merged->id,
+                'merge_details' => json_encode($mergeDetails),
+            ]);
+
+            $merged->is_active = false;
+            $merged->merged_into_id = $master->id;
+            $merged->merge_record_id = $mergeRecord->id;
+            
+            if (!$merged->save()) {
+                throw new \Exception('Failed to update merged contact status');
             }
+            
+            // Verify the update
+            $merged->refresh();
+            if ($merged->is_active || $merged->merged_into_id !== $master->id) {
+                throw new \Exception('Contact merge status not persisted correctly');
+            }
+            DB::commit();
 
-            // Mark secondary contact as merged
-            $secondary->merged_to_id = $master->id;
-            $secondary->save();
-            $master->save();
+            return response()->json([
+                'success' => true,
+                'message' => 'Contacts merged successfully',
+                'data' => [
+                    'master_contact' => $master->load('customFields'),
+                    'merge_record' => $mergeRecord
+                ]
+            ]);
 
-            return response()->json(['status' => 'success', 'message' => 'Contacts merged successfully.']);
         } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
             throw $e;
         } catch (\Exception $e) {
-            Log::error('Merge Contact Error: ' . $e->getMessage());
-            return response()->json(['status' => 'error', 'message' => 'Failed to merge contacts.'], 500);
+            DB::rollBack();
+            Log::error('Merge Failed: '.$e->getMessage()."\n".$e->getTraceAsString());
+            return response()->json([
+                'success' => false,
+                'message' => 'Merge failed: '.$e->getMessage()
+            ], 500);
         }
     }
 
-    public function mergedInfo($id)
+    protected function mergeStandardFields($master, $merged, &$mergeDetails)
     {
-        $contact = Contact::with('customFields.customField')->find($id);
-
-        if (!$contact) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Merged contact not found.'
-            ], 404);
+        $standardFields = ['phone', 'gender', 'profile_image', 'additional_file'];
+        
+        foreach ($standardFields as $field) {
+            if (empty($master->$field) && !empty($merged->$field)) {
+                $mergeDetails['field_changes'][$field] = [
+                    'action' => 'copied_from_merged',
+                    'old_value' => $master->$field,
+                    'new_value' => $merged->$field
+                ];
+                $master->$field = $merged->$field;
+            }
         }
+    }
 
-        return response()->json([
-            'status' => 'success',
-            'contact' => $contact
-        ]);
+    protected function mergeEmailField($master, $merged, &$mergeDetails)
+    {
+        if ($master->email !== $merged->email) {
+            $mergeDetails['additional_emails'] = $merged->email;
+            $mergeDetails['field_changes']['email'] = [
+                'action' => 'additional_stored',
+                'master_value' => $master->email,
+                'merged_value' => $merged->email
+            ];
+        }
+    }
+
+    protected function mergeCustomFields($master, $merged, &$mergeDetails)
+    {
+        foreach ($merged->customFields as $mergedCustomField) {
+            $existingField = $master->customFields->firstWhere('id', $mergedCustomField->id);
+            
+            if (!$existingField) {
+                // Add new custom field from merged contact
+                $master->customFields()->attach($mergedCustomField->id, [
+                    'value' => $mergedCustomField->pivot->value
+                ]);
+                
+                $mergeDetails['custom_field_changes'][] = [
+                    'custom_field_id' => $mergedCustomField->id,
+                    'name' => $mergedCustomField->name,
+                    'action' => 'added_from_merged',
+                    'value' => $mergedCustomField->pivot->value
+                ];
+            } elseif ($existingField->pivot->value !== $mergedCustomField->pivot->value) {
+                // Handle conflict (keeping master value in this implementation)
+                $mergeDetails['custom_field_changes'][] = [
+                    'custom_field_id' => $mergedCustomField->id,
+                    'name' => $mergedCustomField->name,
+                    'action' => 'kept_master_value',
+                    'master_value' => $existingField->pivot->value,
+                    'merged_value' => $mergedCustomField->pivot->value
+                ];
+            }
+        }
+    }
+
+    public function mergePreview(Request $request)
+    {
+        $master = Contact::with('customFields')->findOrFail($request->master_id);
+        $merged = Contact::with('customFields')->findOrFail($request->merged_id);
+
+        return view('contacts.partials.merge_preview', compact('master', 'merged'));
     }
 }

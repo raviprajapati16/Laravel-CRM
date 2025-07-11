@@ -9,12 +9,13 @@ use Illuminate\Support\Facades\Route;
 // });
 
 Route::get('/', [ContactController::class, 'index'])->name('contacts.index');
-Route::get('/contacts/{id}', [ContactController::class, 'show']);
+Route::get('/contacts/{id}', [ContactController::class, 'edit'])->name('contacts.edit');
 Route::post('/contacts', [ContactController::class, 'store'])->name('contacts.store');
 Route::delete('/contacts/{id}', [ContactController::class, 'destroy'])->name('contacts.destroy');
-Route::post('/contacts/fetch', [ContactController::class, 'fetch'])->name('contacts.fetch');
+Route::get('/contactsfetch', [ContactController::class, 'contactsfetch'])->name('contactsfetch');
 Route::post('/contacts/merge', [ContactController::class, 'merge'])->name('contacts.merge');
-Route::get('/contacts/{id}/merged-info', [ContactController::class, 'mergedInfo'])->name('contacts.merged-info');
+Route::get('/contacts/merge/preview', [ContactController::class, 'mergePreview'])->name('contacts.merge.preview');
+
 
 
 // Admin Custom Fields
