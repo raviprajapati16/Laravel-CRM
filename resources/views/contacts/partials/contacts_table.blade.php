@@ -32,9 +32,11 @@
                             <td>{{ $contact->phone }}</td>
                             <td>{{ ucfirst($contact->gender) }}</td>
                             @foreach($customFields as $field)
+                                @if ($field->show_on_table)
                                 <td>
                                    {{ $contact->customFields->firstWhere('id', $field->id)?->pivot->value ?? '' }}
                                 </td>
+                                @endif
                             @endforeach
                             <td>
                                 <button class="btn btn-sm btn-primary edit-contact" data-id="{{ $contact->id }}">Edit</button>

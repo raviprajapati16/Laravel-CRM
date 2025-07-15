@@ -31,7 +31,7 @@ class ContactController extends Controller
         }
 
         $contacts = $query->paginate(10);;
-        $customFields = CustomField::where('show_on_table', true)->get();
+        $customFields = CustomField::all();
         
         if ($request->ajax()) {
             return view('contacts.partials.contacts_table', compact('contacts', 'customFields'))->render();

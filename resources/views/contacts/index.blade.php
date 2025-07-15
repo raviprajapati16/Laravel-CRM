@@ -363,7 +363,6 @@
 
             // Handle merge form submission
             $('#mergeContactsForm').on('submit', function(e) {
-                alert('mergeContactsForm');
                 e.preventDefault();
                 
                 const formData = $(this).serialize();
