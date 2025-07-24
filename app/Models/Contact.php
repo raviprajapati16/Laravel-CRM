@@ -25,4 +25,19 @@ class Contact extends Model
     {
         return $this->hasMany(ContactMerge::class, 'merged_contact_id');
     }
+    
+    public function mergedInto()
+    {
+        return $this->belongsTo(Contact::class, 'merged_into_id');
+    }
+
+    public function mergedContacts()
+    {
+        return $this->hasMany(Contact::class, 'merged_into_id');
+    }
+
+    public function mergeRecord()
+    {
+        return $this->belongsTo(ContactMerge::class, 'merge_record_id');
+    }
 }

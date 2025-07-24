@@ -16,19 +16,37 @@ class ContactController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Contact::query()->with(['customFields' => function($query) {
+        $query = Contact::query()->with(['mergedContacts','customFields' => function($query) {
             $query->where('show_on_table', true);
-        }]);
-        
-        if ($request->has('name') && $request->name) {
-            $query->where('name', 'like', '%' . $request->name . '%');
-        }
-        if ($request->has('email') && $request->email) {
-            $query->where('email', 'like', '%' . $request->email . '%');
-        }
-        if ($request->has('gender') && $request->gender) {
-            $query->where('gender', $request->gender);
-        }
+        }])
+        ->whereNull('merged_into_id')
+        ->where(function($mainQuery) use ($request) {
+            // Search in master contacts
+            if ($request->has('name') && $request->name) {
+                $mainQuery->where('name', 'like', '%' . $request->name . '%');
+            }
+            if ($request->has('email') && $request->email) {
+                $mainQuery->where('email', 'like', '%' . $request->email . '%');
+            }
+            if ($request->has('gender') && $request->gender) {
+                $mainQuery->where('gender', $request->gender);
+            }
+            
+            // OR search in merged contacts
+            if ($request->anyFilled(['name', 'email', 'gender'])) {
+                $mainQuery->orWhereHas('mergedContacts', function($query) use ($request) {
+                    if ($request->has('name') && $request->name) {
+                        $query->where('name', 'like', '%' . $request->name . '%');
+                    }
+                    if ($request->has('email') && $request->email) {
+                        $query->where('email', 'like', '%' . $request->email . '%');
+                    }
+                    if ($request->has('gender') && $request->gender) {
+                        $query->where('gender', $request->gender);
+                    }
+                });
+            }
+        });
 
         $contacts = $query->paginate(10);;
         $customFields = CustomField::all();
