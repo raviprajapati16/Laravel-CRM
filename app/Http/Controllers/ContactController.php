@@ -63,11 +63,11 @@ class ContactController extends Controller
         try {
             // Get all active contacts (excluding the one being merged if provided)
             $contacts = Contact::query()
-            ->when($request->exclude, function($query, $excludeId) {
-                $query->where('id', '!=', $excludeId);
-            })
-            ->orderBy('name')
-            ->get();
+                ->where('is_active', true)
+                ->whereNull('merged_into_id')
+                ->where('id', '!=', $request->exclude) 
+                ->orderBy('name')
+                ->get(['id', 'name', 'email']);
             
             // Format the response
             $formattedContacts = $contacts->map(function($contact) {
@@ -239,15 +239,16 @@ class ContactController extends Controller
     {
         try {
             $contact = Contact::findOrFail($id);
+
             // Delete files
-            if ($contact->profile_image) Storage::disk('public')->delete($contact->profile_image);
-            if ($contact->additional_file) Storage::disk('public')->delete($contact->additional_file);
+            // if ($contact->profile_image) Storage::disk('public')->delete($contact->profile_image);
+            // if ($contact->additional_file) Storage::disk('public')->delete($contact->additional_file);
 
             $contact->delete();
             return response()->json(['status' => 'deleted', 'message' => 'Contact deleted.']);
         } catch (\Exception $e) {
             Log::error('Delete Contact Error: ' . $e->getMessage());
-            return response()->json(['status' => 'error', 'message' => 'Failed to delete contact.'], 500);
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
     }
 

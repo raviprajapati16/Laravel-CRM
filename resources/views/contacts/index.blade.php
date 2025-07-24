@@ -174,11 +174,9 @@
         $(document).ready(function() {
             // live filter handlers
             $('#search_name, #search_email').on('keyup', debounce(fetchContacts, 500));
-            $('#search_gender').on('change', function() {
-                fetchContacts();
-            });
+            $('#search_gender').on('change', fetchContacts);
 
-            // Clear button handler
+            // Clear filter
             $('#clear_filters').on('click', function() {
                 $('#search_name').val('');
                 $('#search_email').val('');
@@ -186,14 +184,7 @@
                 fetchContacts();
             });
 
-            // Pagination click handler
-            $(document).on('click', '.pagination a', function(e) {
-                e.preventDefault();
-                const page = $(this).attr('href').split('page=')[1];
-                fetchContacts(page);
-            });
-
-            // Add and Update
+            // Add/Edit Contact Form Submission
             $('#contactForm').on('submit', function(e) {
                 e.preventDefault();
                 let formData = new FormData(this);
@@ -208,6 +199,7 @@
                         fetchContacts();
                         Swal.fire('Success', res.message, 'success');
                         $('#contactForm')[0].reset();
+                        $('.error-text').text('');
                     },
                     error: function(xhr) {
                         if (xhr.status === 422) {
@@ -216,131 +208,12 @@
                                 $('.' + key.replace(/\./g, '_') + '_error').text(val[0]);
                             });
                         } else {
-                            alert('Something went wrong!');
+                            Swal.fire('Error', 'Something went wrong!', 'error');
                         }
                     }
                 });
             });
 
-            // Delete
-            $('.deleteForm').on('click', function(e) {
-                e.preventDefault();
-                let id = $(this).data('id');
-                let form = this;
-
-                Swal.fire({
-                    title: 'Are you sure?',
-                    text: "You are about to delete this contact.",
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: 'Yes, delete it!'
-                }).then(result => {
-                    if (result.isConfirmed) {
-                        $.ajax({
-                            url: `/contacts/${id}`,
-                            type: 'DELETE',
-                            data: {
-                                _token: "{{ csrf_token() }}"
-                            },
-                            success: res => {
-                                Swal.fire('Deleted', res.message, 'success');
-                                fetchContacts();
-                            }
-                        });
-                    }
-                });
-            });
-
-            // Edit 
-            $('.edit-contact').on('click', function() {
-                var contactId = $(this).data('id');
-                $.get(`/contacts/${contactId}`, function(res) {
-                    const c = res.contact;
-
-                    $('#contactModalTitle').text('Edit Contact');
-                    $('.error-text').text('');
-
-                    $('#contact_id').val(c.id);
-                    $('[name="name"]').val(c.name);
-                    $('[name="email"]').val(c.email);
-                    $('[name="phone"]').val(c.phone);
-                    $('[name="gender"]').val(c.gender);
-
-                    // Clear and reload custom fields
-                    @foreach ($customFields as $field)
-                        @if ($field->type === 'text' || $field->type === 'date')
-                            $(`[name="custom_fields[{{ $field->id }}]"]`).val('');
-                        @elseif ($field->type === 'textarea')
-                            $(`[name="custom_fields[{{ $field->id }}]"]`).text('');
-                        @endif
-                    @endforeach
-
-                    if (c.custom_fields.length) {
-                        c.custom_fields.forEach(function(cf) {
-                            $(`[name="custom_fields[${cf.id}]"]`).val(cf.pivot.value);
-                        });
-                    }
-
-                    $('#contactModal').modal('show');
-                });
-            });
-
-          
-            // Handle merge button click
-            $(document).on('click', '.merge-contacts', function() {
-                const contactId = $(this).data('id');
-                const contactName = $(this).closest('tr').find('td:first').text().trim();
-                
-                // Set the contact to be merged
-                $('#merged_contact_id').html(`
-                    <option value="${contactId}" selected>${contactName}</option>
-                `);
-                
-                // Clear and disable master contact select until loaded
-                $('#master_contact_id').html('<option value="">Loading contacts...</option>').prop('disabled', true);
-                
-                // Show the modal
-                $('#mergeContactsModal').modal('show');
-                
-                // Load available contacts for master selection
-                loadContactsForMerge(contactId);
-            });
-
-            // Function to load contacts for merging
-            function loadContactsForMerge(excludeId) {
-               $('#master_contact_id').html('<option value="">Loading contacts...</option>');
-                 $.ajax({
-                    url: "{{ route('contactsfetch') }}",
-                    type: "GET",
-                    data: {
-                        exclude: excludeId // Pass the contact ID to exclude
-                    },
-                    success: function(response) {
-                        if (response.status === 'success') {
-                            let options = '<option value="">Select Master Contact</option>';
-                            
-                            if (response.contacts && response.contacts.length > 0) {
-                                response.contacts.forEach(contact => {
-                                    options += `<option value="${contact.id}">${contact.text}</option>`;
-                                });
-                            } else {
-                                options = '<option value="">No contacts available</option>';
-                                toastr.warning('No other contacts available for merging');
-                            }
-                            
-                            $('#master_contact_id').html(options).prop('disabled', false);
-                        } else {
-                            $('#master_contact_id').html('<option value="">Error: ' + (response.message || 'Unknown error') + '</option>');
-                            toastr.error(response.message || 'Failed to load contacts');
-                        }
-                    },
-                    error: function(xhr) {
-                        console.error('AJAX Error:', xhr.responseText);
-                        $('#master_contact_id').html('<option value="">Error loading contacts</option>');
-                        toastr.error('Server error occurred while loading contacts');
-                    }
-                });
-            }
 
             // Clear form when modal is hidden
             $('#mergeContactsModal').on('hidden.bs.modal', function() {
@@ -402,6 +275,125 @@
             });
 
         });
+
+        $(document).on('click', '.edit-contact', function(){
+            // Edit 
+            var contactId = $(this).data('id');
+            $.get(`/contacts/${contactId}`, function(res) {
+                const c = res.data;
+
+                $('#contactModalTitle').text('Edit Contact');
+                $('.error-text').text('');
+
+                $('#contact_id').val(c.id);
+                $('[name="name"]').val(c.name);
+                $('[name="email"]').val(c.email);
+                $('[name="phone"]').val(c.phone);
+                $('[name="gender"]').val(c.gender);
+
+                // Clear and reload custom fields
+                @foreach ($customFields as $field)
+                    @if ($field->type === 'text' || $field->type === 'date')
+                        $(`[name="custom_fields[{{ $field->id }}]"]`).val('');
+                    @elseif ($field->type === 'textarea')
+                        $(`[name="custom_fields[{{ $field->id }}]"]`).text('');
+                    @endif
+                @endforeach
+
+                if (c.custom_fields.length) {
+                    c.custom_fields.forEach(function(cf) {
+                        $(`[name="custom_fields[${cf.id}]"]`).val(cf.value);
+                    });
+                }
+
+                $('#contactModal').modal('show');
+            });
+        });
+
+        $(document).on('click','.deleteForm', function(e){
+            // Delete
+            e.preventDefault();
+            let id = $(this).data('id');
+            let form = this;
+
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "You are about to delete this contact.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, delete it!'
+            }).then(result => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: `/contacts/${id}`,
+                        type: 'DELETE',
+                        data: {
+                            _token: "{{ csrf_token() }}"
+                        },
+                        success: res => {
+                            Swal.fire('Deleted', res.message, 'success');
+                            fetchContacts();
+                        }
+                    });
+                }
+            });
+        });
+
+        // Handle merge button click
+        $(document).on('click', '.merge-contacts', function() {
+            const contactId = $(this).data('id');
+            const contactName = $(this).closest('tr').find('td:first').text().trim();
+            
+            // Set the contact to be merged
+            $('#merged_contact_id').html(`
+                <option value="${contactId}" selected>${contactName}</option>
+            `);
+            
+            // Clear and disable master contact select until loaded
+            $('#master_contact_id').html('<option value="">Loading contacts...</option>').prop('disabled', true);
+            
+            // Show the modal
+            $('#mergeContactsModal').modal('show');
+            
+            // Load available contacts for master selection
+            loadContactsForMerge(contactId);
+        });
+
+        // Function to load contacts for merging
+        function loadContactsForMerge(excludeId) {
+            $('#master_contact_id').html('<option value="">Loading contacts...</option>');
+                $.ajax({
+                url: "{{ route('contactsfetch') }}",
+                type: "GET",
+                data: {
+                    exclude: excludeId // Pass the contact ID to exclude
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        let options = '<option value="">Select Master Contact</option>';
+                        
+                        if (response.contacts && response.contacts.length > 0) {
+                            response.contacts.forEach(contact => {
+                                options += `<option value="${contact.id}">${contact.text}</option>`;
+                            });
+                        } else {
+                            options = '<option value="">No contacts available</option>';
+                            toastr.warning('No other contacts available for merging');
+                        }
+                        
+                        $('#master_contact_id').html(options).prop('disabled', false);
+                    } else {
+                        $('#master_contact_id').html('<option value="">Error: ' + (response.message || 'Unknown error') + '</option>');
+                        toastr.error(response.message || 'Failed to load contacts');
+                    }
+                },
+                error: function(xhr) {
+                    console.error('AJAX Error:', xhr.responseText);
+                    $('#master_contact_id').html('<option value="">Error loading contacts</option>');
+                    toastr.error('Server error occurred while loading contacts');
+                }
+            });
+        }
 
          // Function to show merge preview
         function showMergePreview(masterId, mergedId) {
