@@ -16,9 +16,17 @@ class ContactController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Contact::query()->with(['mergedContacts','customFields' => function($query) {
-            $query->where('show_on_table', true);
-        }])
+        $query = Contact::query()->with([
+            'mergedContacts' => function($query) {
+                // Load nested merged contacts
+                $query->with(['mergedContacts' => function($q) {
+                    $q->with('customFields');
+                }, 'customFields']);
+            },
+            'customFields' => function($query) {
+                $query->where('show_on_table', true);
+            }
+        ])
         ->whereNull('merged_into_id')
         ->where(function($mainQuery) use ($request) {
             // Search in master contacts

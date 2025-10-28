@@ -1,36 +1,53 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="mb-4">Manage Contacts</h4>
-        <button class="btn btn-success" onclick="openAddContactModal()">
-            <i class="bi bi-person-plus-fill me-1"></i> Add Contact
+    <div class="page-header d-flex justify-content-between">
+        <h1 class="page-title">
+            <i class="fas fa-users me-2"></i>
+            Manage Contacts
+        </h1>
+        <button class="btn btn-primary" onclick="openAddContactModal()">
+            <i class="fas fa-user-plus me-1"></i> Add Contact
         </button>
     </div>
 
     <!-- Filters Card -->
-    <div class="card mb-4 shadow-sm">
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <input type="text" id="search_name" class="form-control" placeholder="Search by Name">
+    <div class="filter-card">
+        <h5 class="mb-3"><i class="fas fa-filter me-2"></i>Filter Contacts</h5>
+        <div class="row g-3">
+            <div class="col-md-3">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0">
+                        <i class="fas fa-search text-muted"></i>
+                    </span>
+                    <input type="text" id="search_name" class="form-control border-start-0" placeholder="Search by Name">
                 </div>
-                <div class="col-md-3">
-                    <input type="text" id="search_email" class="form-control" placeholder="Search by Email">
+            </div>
+            <div class="col-md-3">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0">
+                        <i class="fas fa-envelope text-muted"></i>
+                    </span>
+                    <input type="text" id="search_email" class="form-control border-start-0" placeholder="Search by Email">
                 </div>
-                <div class="col-md-3">
-                    <select id="search_gender" class="form-select">
+            </div>
+            <div class="col-md-3">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0">
+                        <i class="fas fa-venus-mars text-muted"></i>
+                    </span>
+                    <select id="search_gender" class="form-select border-start-0">
                         <option value="">All Genders</option>
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
                         <option value="Other">Other</option>
                     </select>
                 </div>
-                <div class="col-md-3 d-flex align-items-center gap-2">
-                    <button class="btn btn-outline-secondary w-100" id="clear_filters">
-                        <i class="bi bi-x-circle"></i> Clear Filters
-                    </button>
-                </div>
+            </div>
+            <div class="col-md-3 d-flex align-items-center gap-2">
+                <button class="btn btn-outline-secondary w-100" id="clear_filters">
+                    <i class="fas fa-times-circle me-1"></i> Clear Filters
+                </button>
             </div>
         </div>
     </div>
@@ -43,8 +60,10 @@
         <div class="modal-dialog modal-lg">
             <form id="contactForm" enctype="multipart/form-data">
                 <div class="modal-content">
-                    <div class="modal-header bg-primary text-white">
-                        <h5 class="modal-title" id="contactModalTitle">Add</h5>
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="contactModalTitle">
+                            <i class="fas fa-user-plus me-2"></i>Add Contact
+                        </h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
@@ -53,66 +72,99 @@
 
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label">Name</label>
-                                <input type="text" name="name" class="form-control" placeholder="Name">
-                                <span class="text-danger error-text name_error"></span>
+                                <label class="form-label fw-semibold">Name</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-user text-muted"></i>
+                                    </span>
+                                    <input type="text" name="name" class="form-control" placeholder="Full Name">
+                                </div>
+                                <span class="text-danger error-text name_error small"></span>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Email</label>
-                                <input type="email" name="email" class="form-control" placeholder="Email">
-                                <span class="text-danger error-text email_error"></span>
+                                <label class="form-label fw-semibold">Email</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-envelope text-muted"></i>
+                                    </span>
+                                    <input type="email" name="email" class="form-control" placeholder="Email Address">
+                                </div>
+                                <span class="text-danger error-text email_error small"></span>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Phone</label>
-                                <input type="text" name="phone" class="form-control" placeholder="Phone">
-                                <span class="text-danger error-text phone_error"></span>
+                                <label class="form-label fw-semibold">Phone</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-phone text-muted"></i>
+                                    </span>
+                                    <input type="text" name="phone" class="form-control" placeholder="Phone Number">
+                                </div>
+                                <span class="text-danger error-text phone_error small"></span>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Gender</label>
-                                <select name="gender" class="form-select">
-                                    <option value="">Select Gender</option>
-                                    <option value="Male">Male</option>
-                                    <option value="Female">Female</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                                <span class="text-danger error-text gender_error"></span>
+                                <label class="form-label fw-semibold">Gender</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-venus-mars text-muted"></i>
+                                    </span>
+                                    <select name="gender" class="form-select">
+                                        <option value="">Select Gender</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <span class="text-danger error-text gender_error small"></span>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Profile Image</label>
-                                <input type="file" name="profile_image" class="form-control">
-                                <span class="text-danger error-text profile_image_error"></span>
+                                <label class="form-label fw-semibold">Profile Image</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-image text-muted"></i>
+                                    </span>
+                                    <input type="file" name="profile_image" class="form-control">
+                                </div>
+                                <span class="text-danger error-text profile_image_error small"></span>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Additional File</label>
-                                <input type="file" name="additional_file" class="form-control">
-                                <span class="text-danger error-text additional_file_error"></span>
+                                <label class="form-label fw-semibold">Additional File</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-file text-muted"></i>
+                                    </span>
+                                    <input type="file" name="additional_file" class="form-control">
+                                </div>
+                                <span class="text-danger error-text additional_file_error small"></span>
                             </div>
                         </div>
 
-                        <div id="custom_fields_area" class="mt-3">
+                        <div id="custom_fields_area" class="mt-4">
+                            <h6 class="mb-3 border-bottom pb-2">
+                                <i class="fas fa-list-alt me-2"></i>Custom Fields
+                            </h6>
                             <div class="row g-3">
                                 @foreach ($customFields as $field)
                                     <div class="col-md-6">
-                                        <label class="form-label">{{ $field->name }}</label>
+                                        <label class="form-label fw-semibold">{{ $field->name }}</label>
                                         @if ($field->type === 'text')
                                             <input type="text" class="form-control"
                                                 name="custom_fields[{{ $field->id }}]">
                                             <span
-                                                class="text-danger error-text custom_fields_{{ $field->id }}_error"></span>
+                                                class="text-danger error-text custom_fields_{{ $field->id }}_error small"></span>
                                         @elseif($field->type === 'name')
                                             <input type="name" class="form-control"
                                                 name="custom_fields[{{ $field->id }}]">
                                             <span
-                                                class="text-danger error-text custom_fields_{{ $field->id }}_error"></span>
+                                                class="text-danger error-text custom_fields_{{ $field->id }}_error small"></span>
                                         @elseif($field->type === 'date')
                                             <input type="date" class="form-control"
                                                 name="custom_fields[{{ $field->id }}]">
                                             <span
-                                                class="text-danger error-text custom_fields_{{ $field->id }}_error"></span>
+                                                class="text-danger error-text custom_fields_{{ $field->id }}_error small"></span>
                                         @elseif($field->type === 'textarea')
                                             <textarea class="form-control" name="custom_fields[{{ $field->id }}]"></textarea>
                                             <span
-                                                class="text-danger error-text custom_fields_{{ $field->id }}_error"></span>
+                                                class="text-danger error-text custom_fields_{{ $field->id }}_error small"></span>
                                         @endif
                                     </div>
                                 @endforeach
@@ -120,9 +172,11 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-1"></i> Cancel
+                        </button>
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-save me-1"></i> Save Contact
+                            <i class="fas fa-save me-1"></i> Save Contact
                         </button>
                     </div>
                 </div>
@@ -134,33 +188,41 @@
     <div class="modal fade" id="mergeContactsModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header bg-info text-white">
-                    <h5 class="modal-title">Merge Contacts</h5>
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-merge me-2"></i>Merge Contacts
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <form id="mergeContactsForm">
                     @csrf
                     <div class="modal-body">
-                        <div class="form-group">
-                            <label for="master_contact_id">Master Contact (will be kept)</label>
+                        <div class="form-group mb-3">
+                            <label for="master_contact_id" class="form-label fw-semibold">Master Contact (will be kept)</label>
                             <select name="master_contact_id" id="master_contact_id" class="form-control" required>
                                 <option value="">Select Master Contact</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label for="merged_contact_id">Contact to Merge (will be deactivated)</label>
+                        <div class="form-group mb-3">
+                            <label for="merged_contact_id" class="form-label fw-semibold">Contact to Merge (will be deactivated)</label>
                             <select name="merged_contact_id" id="merged_contact_id" class="form-control" required>
                                 <option value="">Select Contact to Merge</option>
                             </select>
                         </div>
                         <div id="mergePreview" class="mt-3 d-none">
-                            <h5>Merge Preview</h5>
+                            <h5 class="mb-3">
+                                <i class="fas fa-eye me-2"></i>Merge Preview
+                            </h5>
                             <div id="mergePreviewContent"></div>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                        <button class="btn btn-primary" type="submit">Confirm Merge</button>
+                        <button class="btn btn-light" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-1"></i> Cancel
+                        </button>
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fas fa-merge me-1"></i> Confirm Merge
+                        </button>
                     </div>
                 </form>
             </div>
@@ -168,9 +230,9 @@
     </div>
 @endsection
 
-
 @section('scripts')
     <script>
+        // Your existing JavaScript code remains unchanged
         $(document).ready(function() {
             // live filter handlers
             $('#search_name, #search_email').on('keyup', debounce(fetchContacts, 500));
@@ -441,10 +503,5 @@
                 $('.pagination').html($(res).find('.pagination').html());
             });
         }
-
-  
-
-        // Call on load
-        // fetchContacts();
     </script>
 @endsection
