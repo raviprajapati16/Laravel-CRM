@@ -362,7 +362,7 @@
             <div class="col-md-2 sidebar p-0">
                 <div class="sidebar-brand">
                     <i class="fas fa-address-book"></i>
-                    <span>CRM Pro</span>
+                    <span>CRM</span>
                 </div>
                 <div class="nav flex-column px-3">
                     <a href="{{ route('contacts.index') }}" 

@@ -18,9 +18,11 @@ class ContactController extends Controller
     {
         $query = Contact::query()->with([
             'mergedContacts' => function($query) {
-                // Load nested merged contacts
+                // Load 3 levels deep for nested merges
                 $query->with(['mergedContacts' => function($q) {
-                    $q->with('customFields');
+                    $q->with(['mergedContacts' => function($q2) {
+                        $q2->with('customFields');
+                    }, 'customFields']);
                 }, 'customFields']);
             },
             'customFields' => function($query) {

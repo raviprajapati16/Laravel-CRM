@@ -37,7 +37,10 @@ class Contact extends Model
     {
         return $this->hasMany(Contact::class, 'merged_into_id')
                 ->with(['mergedContacts' => function($query) {
-                    $query->with('customFields');
+                    // Load nested merged contacts
+                    $query->with(['mergedContacts' => function($q) {
+                        $q->with('customFields');
+                    }, 'customFields']);
                 }, 'customFields'])
                 ->with('customFields');
     }

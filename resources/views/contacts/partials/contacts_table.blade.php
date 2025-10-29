@@ -16,185 +16,86 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach($contacts as $contact)
-                    @if(!$contact->merged_into_id)
-                    <tr class="master-contact">
-                        {{-- Name Column --}}
-                        <td>
-                            <div class="contact-hierarchy">
-                                @php
-                                    function displayContactHierarchy($contact, $level = 0) {
-                                        $html = '';
-                                        $indent = $level * 15;
-                                        $borderColor = $level == 0 ? '#007bff' : ($level == 1 ? '#ffc107' : ($level == 2 ? '#17a2b8' : '#6c757d'));
-                                        
-                                        $html .= '<div class="hierarchy-item level-' . $level . '" style="padding-left: ' . $indent . 'px; ' . ($level > 0 ? 'border-left: 2px solid ' . $borderColor . ';' : '') . '">';
-                                        
-                                        if($level == 0) {
-                                            if($contact->profile_image) {
-                                                $html .= '<img src="' . asset('storage/' . $contact->profile_image) . '" width="25" class="img-thumbnail mr-2">';
-                                            }
-                                            $html .= '<strong>' . $contact->name . '</strong>';
-                                            $html .= '<span class="badge bg-primary text-white merge-badge ms-1">Primary</span>';
-                                        } else {
-                                            $html .= '<div class="d-flex align-items-center">';
-                                            if($contact->profile_image) {
-                                                $html .= '<img src="' . asset('storage/' . $contact->profile_image) . '" width="25" class="img-thumbnail mr-2">';
-                                            }
-                                            $html .= '<div>' . $contact->name . '</div>';
-                                            $html .= '<span class="badge bg-warning text-dark merge-badge ms-2">Merged</span>';
-                                            if($level > 1) {
-                                                $html .= '<span class="badge bg-info text-dark merge-badge ms-1">Level ' . $level . '</span>';
-                                            }
-                                            $html .= '</div>';
-                                        }
-                                        
-                                        $html .= '</div>';
-                                        
-                                        // Recursively display merged contacts
-                                        if($contact->mergedContacts->count() > 0) {
-                                            foreach($contact->mergedContacts as $merged) {
-                                                $html .= displayContactHierarchy($merged, $level + 1);
-                                            }
-                                        }
-                                        
-                                        return $html;
-                                    }
-                                    
-                                    function displayEmailHierarchy($contact, $level = 0) {
-                                        $html = '';
-                                        $indent = $level * 15;
-                                        
-                                        if($level == 0) {
-                                            $html .= '<div><strong>' . $contact->email . '</strong></div>';
-                                        } else {
-                                            $html .= '<div class="hierarchy-item level-' . $level . '" style="padding-left: ' . $indent . 'px">';
-                                            $html .= '<div class="text-muted small">' . $contact->email . '</div>';
-                                            $html .= '</div>';
-                                        }
-                                        
-                                        // Recursively display merged emails
-                                        if($contact->mergedContacts->count() > 0) {
-                                            foreach($contact->mergedContacts as $merged) {
-                                                $html .= displayEmailHierarchy($merged, $level + 1);
-                                            }
-                                        }
-                                        
-                                        return $html;
-                                    }
-                                    
-                                    function displayPhoneHierarchy($contact, $level = 0) {
-                                        $html = '';
-                                        $indent = $level * 15;
-                                        
-                                        if($level == 0) {
-                                            $html .= '<div><strong>' . $contact->phone . '</strong></div>';
-                                        } else {
-                                            $html .= '<div class="hierarchy-item level-' . $level . '" style="padding-left: ' . $indent . 'px">';
-                                            $html .= '<div class="text-muted small">' . $contact->phone . '</div>';
-                                            $html .= '</div>';
-                                        }
-                                        
-                                        // Recursively display merged phones
-                                        if($contact->mergedContacts->count() > 0) {
-                                            foreach($contact->mergedContacts as $merged) {
-                                                $html .= displayPhoneHierarchy($merged, $level + 1);
-                                            }
-                                        }
-                                        
-                                        return $html;
-                                    }
-                                    
-                                    function displayGenderHierarchy($contact, $level = 0) {
-                                        $html = '';
-                                        
-                                        if($level == 0) {
-                                            $html .= '<span class="badge bg-primary">' . ucfirst($contact->gender) . '</span>';
-                                        } else {
-                                            $html .= '<div class="hierarchy-item">';
-                                            $html .= '<span class="badge bg-secondary">' . ucfirst($contact->gender) . '</span>';
-                                            $html .= '</div>';
-                                        }
-                                        
-                                        // Recursively display merged genders
-                                        if($contact->mergedContacts->count() > 0) {
-                                            foreach($contact->mergedContacts as $merged) {
-                                                $html .= displayGenderHierarchy($merged, $level + 1);
-                                            }
-                                        }
-                                        
-                                        return $html;
-                                    }
-                                    
-                                    function displayCustomFieldHierarchy($contact, $fieldId, $level = 0) {
-                                        $value = $contact->customFields->firstWhere('id', $fieldId)?->pivot->value ?? '';
-                                        $html = '';
-                                        
-                                        if($level == 0) {
-                                            $html .= '<div><strong>' . $value . '</strong></div>';
-                                        } else {
-                                            $html .= '<div class="hierarchy-item">';
-                                            $html .= '<div class="text-muted small">' . $value . '</div>';
-                                            $html .= '</div>';
-                                        }
-                                        
-                                        // Recursively display merged custom fields
-                                        if($contact->mergedContacts->count() > 0) {
-                                            foreach($contact->mergedContacts as $merged) {
-                                                $html .= displayCustomFieldHierarchy($merged, $fieldId, $level + 1);
-                                            }
-                                        }
-                                        
-                                        return $html;
-                                    }
-                                @endphp
-                                
-                                {!! displayContactHierarchy($contact) !!}
-                            </div>
-                        </td>
-                        
-                        {{-- Email Column --}}
-                        <td>
-                            <div class="email-hierarchy">
-                                {!! displayEmailHierarchy($contact) !!}
-                            </div>
-                        </td>
-                        
-                        {{-- Phone Column --}}
-                        <td>
-                            <div class="phone-hierarchy">
-                                {!! displayPhoneHierarchy($contact) !!}
-                            </div>
-                        </td>
-                        
-                        {{-- Gender Column --}}
-                        <td>
-                            <div class="gender-hierarchy">
-                                {!! displayGenderHierarchy($contact) !!}
-                            </div>
-                        </td>
-                        
-                        {{-- Custom Fields Columns --}}
-                        @foreach($customFields as $field)
-                            @if ($field->show_on_table)
+                @if($contacts->count() > 0)
+                    @foreach($contacts as $contact)
+                        @if(!$contact->merged_into_id)
+                        <tr class="master-contact">
+                            {{-- Name Column --}}
                             <td>
-                                <div class="custom-field-hierarchy">
-                                    {!! displayCustomFieldHierarchy($contact, $field->id) !!}
+                                <div class="contact-hierarchy">
+                                    @include('contacts.partials.contact_hierarchy', [
+                                        'contact' => $contact, 
+                                        'level' => 0
+                                    ])
                                 </div>
                             </td>
-                            @endif
-                        @endforeach
-                        
-                        <td>
-                            <button class="btn btn-sm btn-primary edit-contact" data-id="{{ $contact->id }}">Edit</button>
-                            <button class="btn btn-sm btn-danger deleteForm" data-id="{{ $contact->id }}">Delete</button>
-                            @if($contact->is_active)
-                            <button class="btn btn-sm btn-info merge-contacts" data-id="{{ $contact->id }}">Merge</button>
-                            @endif
+                            
+                            {{-- Email Column --}}
+                            <td>
+                                <div class="email-hierarchy">
+                                    @include('contacts.partials.email_hierarchy', [
+                                        'contact' => $contact, 
+                                        'level' => 0
+                                    ])
+                                </div>
+                            </td>
+                            
+                            {{-- Phone Column --}}
+                            <td>
+                                <div class="phone-hierarchy">
+                                    @include('contacts.partials.phone_hierarchy', [
+                                        'contact' => $contact, 
+                                        'level' => 0
+                                    ])
+                                </div>
+                            </td>
+                            
+                            {{-- Gender Column --}}
+                            <td>
+                                <div class="gender-hierarchy">
+                                    @include('contacts.partials.gender_hierarchy', [
+                                        'contact' => $contact, 
+                                        'level' => 0
+                                    ])
+                                </div>
+                            </td>
+                            
+                            {{-- Custom Fields Columns --}}
+                            @foreach($customFields as $field)
+                                @if ($field->show_on_table)
+                                <td>
+                                    <div class="custom-field-hierarchy">
+                                        @include('contacts.partials.custom_field_hierarchy', [
+                                            'contact' => $contact, 
+                                            'fieldId' => $field->id,
+                                            'level' => 0
+                                        ])
+                                    </div>
+                                </td>
+                                @endif
+                            @endforeach
+                            
+                            <td>
+                                <button class="btn btn-sm btn-primary edit-contact" data-id="{{ $contact->id }}">Edit</button>
+                                <button class="btn btn-sm btn-danger deleteForm" data-id="{{ $contact->id }}">Delete</button>
+                                @if($contact->is_active)
+                                <button class="btn btn-sm btn-info merge-contacts" data-id="{{ $contact->id }}">Merge</button>
+                                @endif
+                            </td>
+                        </tr>
+                        @endif
+                    @endforeach
+                @else
+                    <tr>
+                        <td colspan="{{ 4 + $customFields->where('show_on_table', true)->count() + 1 }}" class="text-center py-3">
+                            <div class="empty-state">
+                                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No Contacts Found</h5>
+                                <p class="text-muted mb-4">There are no contacts to display at the moment.</p>
+                            </div>
                         </td>
                     </tr>
-                    @endif
-                @endforeach
+                @endif
             </tbody>
         </table>
         <div class="pagination">
@@ -214,10 +115,10 @@
         padding: 2px 0;
     }
     
-    .level-0 { font-weight: bold; }
-    .level-1 { border-left: 2px solid #ffc107; margin-left: 5px; }
-    .level-2 { border-left: 2px solid #17a2b8; margin-left: 10px; }
-    .level-3 { border-left: 2px solid #6c757d; margin-left: 15px; }
+    .level-0 { padding-left: 0px; }
+    .level-1 { padding-left: 15px; border-left: 2px solid #ffc107; }
+    .level-2 { padding-left: 30px; border-left: 2px solid #17a2b8; }
+    .level-3 { padding-left: 45px; border-left: 2px solid #6c757d; }
     
     .merge-badge {
         font-size: 0.7em;

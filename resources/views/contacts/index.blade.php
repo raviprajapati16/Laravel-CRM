@@ -137,7 +137,7 @@
                                 <span class="text-danger error-text additional_file_error small"></span>
                             </div>
                         </div>
-
+                        @if($customFields->count() > 0)
                         <div id="custom_fields_area" class="mt-4">
                             <h6 class="mb-3 border-bottom pb-2">
                                 <i class="fas fa-list-alt me-2"></i>Custom Fields
@@ -170,6 +170,7 @@
                                 @endforeach
                             </div>
                         </div>
+                        @endif
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-light" data-bs-dismiss="modal">
